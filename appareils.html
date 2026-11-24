@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="no-referrer"><meta name="theme-color" content="#061017"><title>Aperçu</title>
+<style>html{background:#061017;color:#F2EADB;font:600 17px/1.5 system-ui,sans-serif}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center}</style></head>
+<body><p id="m">Chargement de l’aperçu…</p>
+<script>
+(async function(){
+  var m = document.getElementById('m'), banc = /appareils/.test(location.pathname);
+  async function preparer(){
+    var k = (location.hash.match(/k=([A-Za-z0-9_-]{43})/) || [])[1];
+    try { if (k) localStorage.setItem('apercu-k', k); else k = localStorage.getItem('apercu-k'); } catch (e) {}
+    if (!k) return null;
+    var b = Uint8Array.from(atob(k.replace(/-/g, '+').replace(/_/g, '/') + '='), function(c){ return c.charCodeAt(0); });
+    var cle = await crypto.subtle.importKey('raw', b, 'AES-GCM', false, ['decrypt']);
+    var d = new Uint8Array(await (await fetch('p.bin?v=2')).arrayBuffer());
+    var p = new Uint8Array(await crypto.subtle.decrypt({name: 'AES-GCM', iv: d.slice(0, 12)}, cle, d.slice(12)));
+    var n = new DataView(p.buffer).getUint32(0), t = new TextDecoder(), h = JSON.parse(t.decode(p.slice(4, 4 + n))), z = 4 + n, u = {};
+    function texte(r){ return t.decode(p.slice(z + r[0], z + r[0] + r[1])); }
+    Object.keys(h.imgs).forEach(function(f){ var i = h.imgs[f]; u[f] = URL.createObjectURL(new Blob([p.slice(z + i[0], z + i[0] + i[1])], {type: i[2]})); });
+    return {site: texte(h.html).replace(/img\/([A-Za-z0-9._-]+)/g, function(a, f){ return u[f] || a; }), banc: texte(h.banc)};
+  }
+  try {
+    var pret = null;
+    try { if (parent !== window && parent.apercuPret) pret = await parent.apercuPret; } catch (e) {}
+    if (!pret){ window.apercuPret = preparer(); pret = await window.apercuPret; }
+    if (!pret){ m.textContent = 'Ce lien est incomplet. Demande le lien complet.'; return; }
+    var page = (location.hash.match(/^#([a-z]+)$/) || [])[1];
+    if (!banc) history.replaceState(null, '', location.pathname + '#' + (page || 'accueil')); else history.replaceState(null, '', location.pathname);
+    if (document.readyState !== 'complete') await new Promise(function(r){ addEventListener('load', r, {once: true}); });
+    await new Promise(function(r){ setTimeout(r, 0); });
+    var garde = window.apercuPret;
+    document.open(); document.write(banc ? pret.banc : pret.site); document.close();
+    if (garde) window.apercuPret = garde;
+  } catch (e) { m.textContent = 'L’aperçu ne s’est pas ouvert. Recharge la page avec le lien complet.'; }
+})();
+</script></body></html>

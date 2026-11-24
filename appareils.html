@@ -11,7 +11,7 @@
     if (!k) return null;
     var b = Uint8Array.from(atob(k.replace(/-/g, '+').replace(/_/g, '/') + '='), function(c){ return c.charCodeAt(0); });
     var cle = await crypto.subtle.importKey('raw', b, 'AES-GCM', false, ['decrypt']);
-    var d = new Uint8Array(await (await fetch('p.bin?v=2')).arrayBuffer());
+    var d = new Uint8Array(await (await fetch('p.bin?v=3')).arrayBuffer());
     var p = new Uint8Array(await crypto.subtle.decrypt({name: 'AES-GCM', iv: d.slice(0, 12)}, cle, d.slice(12)));
     var n = new DataView(p.buffer).getUint32(0), t = new TextDecoder(), h = JSON.parse(t.decode(p.slice(4, 4 + n))), z = 4 + n, u = {};
     function texte(r){ return t.decode(p.slice(z + r[0], z + r[0] + r[1])); }
